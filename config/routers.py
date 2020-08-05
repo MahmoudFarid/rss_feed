@@ -1,11 +1,8 @@
-from django.conf import settings
-from rest_framework.routers import DefaultRouter, SimpleRouter
-
-if settings.DEBUG:
-    router = DefaultRouter()
-else:
-    router = SimpleRouter()
-
+from django.urls import include, path
 
 app_name = "api"
-urlpatterns = router.urls
+
+urlpatterns = [
+    path('auth/', include('djoser.urls.authtoken')),
+    path('auth/', include('djoser.urls')),
+]

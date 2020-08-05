@@ -10,7 +10,6 @@ User = get_user_model()
 class UserAdmin(AuthUserAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name')}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
                                        'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login',)}),
@@ -22,5 +21,5 @@ class UserAdmin(AuthUserAdmin):
         }),
     )
     ordering = ('email',)
-    list_display = ('email', 'is_staff', 'first_name', 'last_name')
+    list_display = ('email', 'is_staff')
     readonly_fields = ('last_login',)
