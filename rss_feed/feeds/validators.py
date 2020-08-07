@@ -4,6 +4,15 @@ logger = logging.getLogger(__name__)
 
 
 def validate_rss_link(parsed):
+    '''
+    Returns an error in case an Exception raised during the validation.
+
+    Parameters:
+        parsed (FeedParserDict): Object from feedparser.parse
+
+    Returns:
+        error (str)(option): The error message
+    '''
     try:
         validate_feed_attrs(parsed)
         validate_feed_items_attrs(parsed)
@@ -13,6 +22,15 @@ def validate_rss_link(parsed):
 
 
 def validate_feed_attrs(parsed):
+    '''
+    Validate the feed that has all the required attrs.
+
+    Parameters:
+        parsed (FeedParserDict): Object from feedparser.parse
+
+    Returns:
+        error (Exception)(option): The error message
+    '''
     if 'bozo_exception' in parsed:
         # Malformed feed
         msg = 'Found Malformed feed, "%s": %s' % (parsed.get('href'), parsed.get('bozo_exception'))
@@ -32,6 +50,18 @@ def validate_feed_attrs(parsed):
 
 
 def validate_feed_items_attrs(parsed):
+    '''
+    - Validate the feed items that have all the required attrs.
+    - Will ignore any item missed any attr.
+    - In case no valid items will raise an exception otherwise will not raise an exception
+        and will override the parsed items with the valid one.
+
+    Parameters:
+        parsed (FeedParserDict): Object from feedparser.parse
+
+    Returns:
+        error (Exception)(option): The error message
+    '''
     missing_attrs = []
     valid_entries = []
     for entry in parsed.get('entries'):
