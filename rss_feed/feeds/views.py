@@ -1,12 +1,13 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from rss_feed.core.mixins import MultipleSerializerMixin
 
-from .filters import ItemFilter
+from .filters import FeedFilter, ItemFilter
 from .models import Feed, Item
 from .serializers import FeedSerializer, ItemSerializer, ItemStateSerializer
 from .utils import prepare_feed_fields, prepare_feed_item_fields
@@ -17,6 +18,8 @@ class FeedViewSet(mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
                   GenericViewSet):
     serializer_class = FeedSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = FeedFilter
 
     def get_queryset(self):
         return Feed.objects.filter(created_by=self.request.user)
@@ -28,6 +31,20 @@ class FeedViewSet(mixins.CreateModelMixin,
         for entry in parsed.get('entries'):
             item_fields = prepare_feed_item_fields(entry, feed)
             Item.objects.create(**item_fields)
+
+    @action(detail=True, methods=['post', 'delete'])
+    def follow(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.method == 'POST':
+            if instance.is_followed:
+                raise ValidationError({"non_field_errors": ["You already followed this feed"]})
+            instance.is_followed = True
+        elif request.method == 'DELETE':
+            if not instance.is_followed:
+                raise ValidationError({"non_field_errors": ["You already unfollowed this feed"]})
+            instance.is_followed = False
+        instance.save()
+        return Response(status=status.HTTP_200_OK, data=self.get_serializer(instance).data)
 
 
 class ItemViewSet(MultipleSerializerMixin,

@@ -13,6 +13,8 @@ class FeedFactory(factory.DjangoModelFactory):
     title = factory.Faker("name")
     description = factory.Faker("sentence", nb_words=5)
     link = factory.Faker("url")
+    xml_url = factory.Faker('url')
+    is_followed = factory.Faker('pybool')
 
 
 class ItemFactory(factory.DjangoModelFactory):

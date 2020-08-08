@@ -13,6 +13,10 @@ class Feed(TimeStampedModel):
     link = models.URLField()
     description = models.TextField()
     image = models.ImageField(null=True, blank=True)
+    is_followed = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('created_by', 'xml_url')
 
     def __str__(self):
         return self.title

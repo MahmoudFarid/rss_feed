@@ -10,12 +10,13 @@ class FeedSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Feed
-        fields = ('id', 'created_by', 'title', 'xml_url', 'link', 'description', 'image')
+        fields = ('id', 'created_by', 'title', 'xml_url', 'link', 'description', 'image', 'is_followed')
         extra_kwargs = {
             'title': {"required": False},
             'link': {"required": False},
             'description': {"required": False},
             'image': {"required": False},
+            'is_followed': {"read_only": True},
         }
 
     def validate(self, validate_data):

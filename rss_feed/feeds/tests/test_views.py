@@ -222,6 +222,34 @@ class TestFeedAPIViewSet(APITestCase):
         self.assertEqual(len(response.keys()), 1)
         self.assertEqual(response.get('xml_url'), ['This field is required.'])
 
+    @mock.patch('rss_feed.feeds.serializers.parse_rss_link', return_value=correct_result)
+    def test_create_feed_with_the_same_xml_url_twice(self, _):
+        response = self.client.post(
+            self.main_api,
+            data=json.dumps(self.data),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 201)
+
+        response = self.client.post(
+            self.main_api,
+            data=json.dumps(self.data),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json().get('non_field_errors'),
+                         ['The fields created_by, xml_url must make a unique set.'])
+
+    @mock.patch('rss_feed.feeds.serializers.parse_rss_link', return_value=correct_result)
+    def test_create_feed_with_the_same_xml_url_in_another_user(self, _):
+        FeedFactory.create(xml_url=self.data.get('xml_url'))
+        response = self.client.post(
+            self.main_api,
+            data=json.dumps(self.data),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 201)
+
     def test_list_feeds(self):
         feeds = FeedFactory.create_batch(5, created_by=self.user)
         FeedFactory.create_batch(3)
@@ -232,14 +260,40 @@ class TestFeedAPIViewSet(APITestCase):
         response = response.json()
         self.assertEqual(response.get('count'), len(feeds))
         for result in response.get('results'):
-            self.assertEqual(len(result.keys()), 6)
+            self.assertEqual(len(result.keys()), 7)
             feed = Feed.objects.get(id=result.get('id'))
             self.assertIn(feed, feeds)
             self.assertEqual(result.get('title'), feed.title)
             self.assertEqual(result.get('xml_url'), feed.xml_url)
             self.assertEqual(result.get('link'), feed.link)
             self.assertEqual(result.get('description'), feed.description)
+            self.assertEqual(result.get('is_followed'), feed.is_followed)
             self.assertIn('image', result)
+
+    def test_filter_feeds_by_follow(self):
+        followed_feeds = FeedFactory.create_batch(3, created_by=self.user, is_followed=True)
+        unfollowed_feeds = FeedFactory.create_batch(2, created_by=self.user, is_followed=False)
+        FeedFactory.create_batch(3)
+        response = self.client.get(
+            self.main_api + "?is_followed=True"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(followed_feeds))
+
+        response = self.client.get(
+            self.main_api + "?is_followed=False"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(unfollowed_feeds))
+
+        response = self.client.get(
+            self.main_api + "?is_followed=tttt"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(followed_feeds) + len(unfollowed_feeds))
 
     def test_retrieve_feed(self):
         feed = FeedFactory.create(created_by=self.user)
@@ -248,12 +302,13 @@ class TestFeedAPIViewSet(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         response = response.json()
-        self.assertEqual(len(response.keys()), 6)
+        self.assertEqual(len(response.keys()), 7)
         self.assertEqual(response.get('id'), feed.id)
         self.assertEqual(response.get('title'), feed.title)
         self.assertEqual(response.get('xml_url'), feed.xml_url)
         self.assertEqual(response.get('link'), feed.link)
         self.assertEqual(response.get('description'), feed.description)
+        self.assertEqual(response.get('is_followed'), feed.is_followed)
         self.assertIn('image', response)
 
     def test_retrieve_feed_by_another_user(self):
@@ -262,6 +317,44 @@ class TestFeedAPIViewSet(APITestCase):
             self.obj_api.format(feed.id)
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_unfollow_followed_feed(self):
+        feed = FeedFactory.create(created_by=self.user, is_followed=True)
+        response = self.client.delete(
+            self.obj_api.format(feed.id) + "follow/"
+        )
+        self.assertEqual(response.status_code, 200)
+        feed.refresh_from_db()
+        response = response.json()
+        self.assertFalse(feed.is_followed)
+
+    def test_unfollow_non_followed_feed(self):
+        feed = FeedFactory.create(created_by=self.user, is_followed=False)
+        response = self.client.delete(
+            self.obj_api.format(feed.id) + "follow/"
+        )
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertEqual(response.get('non_field_errors'), ["You already unfollowed this feed"])
+
+    def test_follow_non_followed_feed(self):
+        feed = FeedFactory.create(created_by=self.user, is_followed=False)
+        response = self.client.post(
+            self.obj_api.format(feed.id) + "follow/"
+        )
+        self.assertEqual(response.status_code, 200)
+        feed.refresh_from_db()
+        response = response.json()
+        self.assertTrue(feed.is_followed)
+
+    def test_follow_followed_feed(self):
+        feed = FeedFactory.create(created_by=self.user, is_followed=True)
+        response = self.client.post(
+            self.obj_api.format(feed.id) + "follow/"
+        )
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertEqual(response.get('non_field_errors'), ["You already followed this feed"])
 
 
 class TestItemAPIViewSet(APITestCase):
