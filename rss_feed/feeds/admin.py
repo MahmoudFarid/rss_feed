@@ -19,17 +19,17 @@ class ItemInlineAdmin(admin.StackedInline):
 
 @admin.register(Feed)
 class FeedAdmin(admin.ModelAdmin):
-    readonly_fields = ('created', 'last_update', 'created_by', 'title', 'is_auto_update',
+    readonly_fields = ('created', 'last_update', 'created_by', 'title', 'is_auto_updated',
                        'link', 'description', 'image', 'is_followed', '_items_count')
     fieldsets = (
         (None, {'fields': ('title', 'xml_url')}),
         (_('More Info'), {'fields': (
             ('link', 'created_by', 'image'),
-            ('is_followed', 'is_auto_update'),
+            ('is_followed', 'is_auto_updated'),
             'description', '_items_count')}),
         (_('Important dates'), {'fields': ('created', 'last_update',)}),
     )
-    list_display = ('title', 'xml_url', 'is_auto_update',)
+    list_display = ('title', 'xml_url', 'is_auto_updated',)
     inlines = [ItemInlineAdmin]
 
     def _items_count(self, obj):

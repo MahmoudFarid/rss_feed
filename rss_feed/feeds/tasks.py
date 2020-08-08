@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def periodic_update_feeds_and_items():
-    # only update any feed that followed by any user
-    feeds_ids = Feed.objects.filter(is_followed=True, is_auto_update=True).values_list('id', flat=True)
+    # only update any feed that followed by any user or auto updated
+    feeds_ids = Feed.objects.filter(is_followed=True, is_auto_updated=True).values_list('id', flat=True)
     group(update_multiple_feeds_in_parallel.s(feed_id) for feed_id in feeds_ids).apply_async()
 
 
@@ -29,7 +29,7 @@ def update_multiple_feeds_in_parallel(feed_id):
             logger.warning(error)
             update_multiple_feeds_in_parallel.retry()
         except MaxRetriesExceededError as e:
-            feed.is_auto_update = False
+            feed.is_auto_updated = False
             feed.save()
             send_notification_to_user(feed)
             logger.error("Can't auto update Feed: {}".format(feed.xml_url))

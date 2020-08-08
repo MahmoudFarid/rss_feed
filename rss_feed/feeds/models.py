@@ -15,7 +15,7 @@ class Feed(TimeStampedModel):
     image = models.ImageField(null=True, blank=True)
     last_update = models.DateTimeField(null=True, blank=True)
     is_followed = models.BooleanField(default=True)
-    is_auto_update = models.BooleanField(default=True)
+    is_auto_updated = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ('created_by', 'xml_url')
