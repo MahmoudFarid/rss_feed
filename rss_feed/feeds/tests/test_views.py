@@ -8,7 +8,7 @@ from rss_feed.users.tests.factories import UserFactory
 
 from ..models import Feed, Item
 from ..utils import prepare_feed_fields, prepare_feed_item_fields
-from .factories import FeedFactory
+from .factories import FeedFactory, ItemFactory
 from .mocking import (
     correct_result, missing_all_entries_attr, missing_feed_attrs,
     missing_some_entries_attr, not_found,
@@ -262,3 +262,149 @@ class TestFeedAPIViewSet(APITestCase):
             self.obj_api.format(feed.id)
         )
         self.assertEqual(response.status_code, 404)
+
+
+class TestItemAPIViewSet(APITestCase):
+
+    def setUp(self):
+        self.user = UserFactory()
+        self.client = APIClient()
+        token, _ = Token.objects.get_or_create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        self.unauthorized_client = APIClient()
+
+        self.feed = FeedFactory(created_by=self.user)
+        self.unread_feed_items = ItemFactory.create_batch(3, feed=self.feed, state=Item.STATE_CHOICES.UNREAD)
+        self.read_feed_items = ItemFactory.create_batch(2, feed=self.feed, state=Item.STATE_CHOICES.READ)
+        self.unread_items = ItemFactory.create_batch(2, feed__created_by=self.user, state=Item.STATE_CHOICES.UNREAD)
+        self.read_items = ItemFactory.create_batch(4, feed__created_by=self.user, state=Item.STATE_CHOICES.READ)
+        ItemFactory.create_batch(2)
+
+        self.feed_items_api = '/api/v1/feeds/{}/items/'.format(self.feed.id)
+        self.items_api = '/api/v1/feeds/items/'
+
+    def test_list_feed_items(self):
+        response = self.client.get(
+            self.feed_items_api
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(self.unread_feed_items) + len(self.read_feed_items))
+        for result in response.get('results'):
+            self.assertEqual(len(result.keys()), 7)
+            item = Item.objects.get(id=result.get('id'))
+            self.assertIn(item, self.unread_feed_items + self.read_feed_items)
+            self.assertEqual(result.get('feed'), item.feed_id)
+            self.assertEqual(result.get('title'), item.title)
+            self.assertEqual(result.get('link'), item.link)
+            self.assertEqual(result.get('published_time'), item.published_time)
+            self.assertEqual(result.get('description'), item.description)
+            self.assertEqual(result.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+
+    def test_filter_feed_items_by_state(self):
+
+        response = self.client.get(
+            self.feed_items_api + "?state=UNREAD"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(self.unread_feed_items))
+        # validate it's ordered by the modified field
+        results = response.get('results')
+        for i, _ in enumerate(results):
+            if i < len(self.unread_feed_items) - 1:
+                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+
+        response = self.client.get(
+            self.feed_items_api + "?state=READ"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(self.read_feed_items))
+        # validate it's ordered by the modified field
+        results = response.get('results')
+        for i, _ in enumerate(results):
+            if i < len(self.read_feed_items) - 1:
+                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+
+    def test_retrieve_feed_item(self):
+        response = self.client.get(
+            self.feed_items_api + "{}/".format(self.unread_feed_items[0].id)
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(len(response.keys()), 7)
+        item = Item.objects.get(id=response.get('id'))
+        self.assertIn(item, self.unread_feed_items)
+        self.assertEqual(response.get('feed'), item.feed_id)
+        self.assertEqual(response.get('title'), item.title)
+        self.assertEqual(response.get('link'), item.link)
+        self.assertEqual(response.get('published_time'), item.published_time)
+        self.assertEqual(response.get('description'), item.description)
+        self.assertEqual(response.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+
+    def test_list_all_items(self):
+        response = self.client.get(
+            self.items_api
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(
+            response.get('count'),
+            len(self.unread_feed_items) + len(self.read_feed_items) + len(self.unread_items) + len(self.read_items))
+        for result in response.get('results'):
+            self.assertEqual(len(result.keys()), 7)
+            item = Item.objects.get(id=result.get('id'))
+            self.assertIn(item, self.unread_feed_items + self.read_feed_items + self.unread_items + self.read_items)
+            self.assertEqual(result.get('feed'), item.feed_id)
+            self.assertEqual(result.get('title'), item.title)
+            self.assertEqual(result.get('link'), item.link)
+            self.assertEqual(result.get('published_time'), item.published_time)
+            self.assertEqual(result.get('description'), item.description)
+            self.assertEqual(result.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+
+    def test_filter_all_items_by_state(self):
+        response = self.client.get(
+            self.items_api + "?state=UNREAD"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(
+            response.get('count'),
+            len(self.unread_feed_items) + len(self.unread_items))
+        # validate it's ordered by the modified field
+        results = response.get('results')
+        for i, _ in enumerate(results):
+            if i < len(self.unread_feed_items) + len(self.unread_items) - 1:
+                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+
+        response = self.client.get(
+            self.items_api + "?state=READ"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(
+            response.get('count'),
+            len(self.read_feed_items) + len(self.read_items))
+        # validate it's ordered by the modified field
+        results = response.get('results')
+        for i, _ in enumerate(results):
+            if i < len(self.read_feed_items) + len(self.read_items) - 1:
+                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+
+    def test_retrieve_item_globally(self):
+        response = self.client.get(
+            self.items_api + "{}/".format(self.unread_items[0].id)
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(len(response.keys()), 7)
+        item = Item.objects.get(id=response.get('id'))
+        self.assertIn(item, self.unread_feed_items + self.unread_items)
+        self.assertEqual(response.get('feed'), item.feed_id)
+        self.assertEqual(response.get('title'), item.title)
+        self.assertEqual(response.get('link'), item.link)
+        self.assertEqual(response.get('published_time'), item.published_time)
+        self.assertEqual(response.get('description'), item.description)
+        self.assertEqual(response.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))

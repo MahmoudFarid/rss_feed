@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Feed
+from .models import Feed, Item
 from .validators import validate_rss_link
 from .utils import parse_rss_link
 
@@ -26,3 +26,9 @@ class FeedSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"non_field_errors": error})
         validate_data['parsed'] = parsed
         return validate_data
+
+
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = ('id', 'feed', 'title', 'link', 'published_time', 'description', 'modified')

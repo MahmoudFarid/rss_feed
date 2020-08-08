@@ -20,19 +20,15 @@ class Feed(TimeStampedModel):
 
 class Item(TimeStampedModel):
     STATE_CHOICES = Choices(
-        (1, 'UNREAD', _('Unread')),
-        (2, 'READ', _('Read')),
-        (3, 'SAVED', _('Saved')),
+        ('UNREAD', _('Unread')),
+        ('READ', _('Read')),
     )
     feed = models.ForeignKey("Feed", on_delete=models.CASCADE, related_name='items')
     title = models.TextField()
     link = models.URLField()
     published_time = models.DateTimeField(null=True, blank=True)
     description = models.TextField()
-    state = models.IntegerField(choices=STATE_CHOICES, default=STATE_CHOICES.UNREAD)
-
-    class Meta:
-        ordering = ['-modified']
+    state = models.CharField(choices=STATE_CHOICES, default=STATE_CHOICES.UNREAD, max_length=10)
 
     def __str__(self):
         return self.title
