@@ -391,9 +391,9 @@ class TestFeedAPIViewSet(APITestCase):
         )
         self.assertEqual(response.status_code, 400)
         response = response.json()
-        self.assertIn('has no title', response.get('non_field_errors')[0])
-        self.assertIn('has no subtitle', response.get('non_field_errors')[0])
-        self.assertIn('has no link', response.get('non_field_errors')[0])
+        self.assertIn('has no title', response.get('non_field_errors'))
+        self.assertIn('has no subtitle', response.get('non_field_errors'))
+        self.assertIn('has no link', response.get('non_field_errors'))
 
 
 class TestItemAPIViewSet(APITestCase):
