@@ -32,3 +32,16 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = ('id', 'feed', 'title', 'link', 'published_time', 'description', 'modified')
+
+
+class ItemStateSerializer(serializers.ModelSerializer):
+    ids = serializers.ListField(min_length=0, allow_empty=False)
+
+    class Meta:
+        model = Item
+        fields = ('ids',)
+
+    def validate_ids(self, ids):
+        if len(ids) != Item.objects.filter(id__in=ids, state=Item.STATE_CHOICES.UNREAD).count():
+            raise serializers.ValidationError("Some ids not found or its state is not correct")
+        return ids

@@ -408,3 +408,68 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(response.get('published_time'), item.published_time)
         self.assertEqual(response.get('description'), item.description)
         self.assertEqual(response.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+
+    def test_mark_items_as_read(self):
+        item = self.unread_items[0]
+        item2 = self.unread_feed_items[0]
+        self.assertEqual(item.state, Item.STATE_CHOICES.UNREAD)
+        self.assertEqual(item2.state, Item.STATE_CHOICES.UNREAD)
+        data = {
+            "ids": [item.id, item2.id]
+        }
+        response = self.client.post(
+            self.items_api + "read/",
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        item.refresh_from_db()
+        item2.refresh_from_db()
+        self.assertEqual(item.state, Item.STATE_CHOICES.READ)
+        self.assertEqual(item2.state, Item.STATE_CHOICES.READ)
+
+    def test_mark_items_as_read_with_mix_of_state(self):
+        item = self.unread_items[0]
+        item2 = self.read_feed_items[0]
+        data = {
+            "ids": [item.id, item2.id]
+        }
+        response = self.client.post(
+            self.items_api + "read/",
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertEqual(response.get('ids'), ["Some ids not found or its state is not correct"])
+
+    def test_mark_items_as_read_with_non_existing_ids(self):
+        item = self.unread_items[0]
+        item2 = self.unread_feed_items[0]
+        data = {
+            "ids": [item.id, item2.id, 12345]
+        }
+        response = self.client.post(
+            self.items_api + "read/",
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertEqual(response.get('ids'), ["Some ids not found or its state is not correct"])
+
+    def test_mark_items_as_read_with_empty_payload(self):
+        data = {}
+        response = self.client.post(
+            self.items_api + "read/",
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertEqual(response.get('ids'), ['This field is required.'])

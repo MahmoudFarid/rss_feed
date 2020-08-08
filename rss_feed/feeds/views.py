@@ -1,10 +1,14 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins
+from rest_framework import mixins, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+
+from rss_feed.core.mixins import MultipleSerializerMixin
 
 from .filters import ItemFilter
 from .models import Feed, Item
-from .serializers import FeedSerializer, ItemSerializer
+from .serializers import FeedSerializer, ItemSerializer, ItemStateSerializer
 from .utils import prepare_feed_fields, prepare_feed_item_fields
 
 
@@ -26,15 +30,26 @@ class FeedViewSet(mixins.CreateModelMixin,
             Item.objects.create(**item_fields)
 
 
-class ItemViewSet(mixins.ListModelMixin,
+class ItemViewSet(MultipleSerializerMixin,
+                  mixins.ListModelMixin,
                   mixins.RetrieveModelMixin,
                   GenericViewSet):
-    serializer_class = ItemSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = ItemFilter
+    action_serializer_classes = {
+        'default': ItemSerializer,
+        'read': ItemStateSerializer,
+    }
 
     def get_queryset(self):
         filter_kwargs = {"feed__created_by": self.request.user}
         if self.kwargs.get('feed_id'):
             filter_kwargs['feed_id'] = self.kwargs.get('feed_id')
         return Item.objects.filter(**filter_kwargs).order_by('-modified')
+
+    @action(detail=False, methods=['post'])
+    def read(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        Item.objects.filter(id__in=serializer.validated_data.get('ids')).update(state=Item.STATE_CHOICES.READ)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
