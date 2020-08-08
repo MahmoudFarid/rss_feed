@@ -47,5 +47,12 @@ TEMPLATES[-1]["OPTIONS"]["loaders"] = [  # type: ignore[index] # noqa F405
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
+# Celery
+# ------------------------------------------------------------------------------
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-eager-propagates
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ALWAYS_EAGER = True
 # Your stuff...
 # ------------------------------------------------------------------------------
+MAX_RETRY_FEED_UPDATE = 2
+RETRY_DELAY_IN_SECONDS = 1

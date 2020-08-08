@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status
 from rest_framework.decorators import action
@@ -27,10 +29,10 @@ class FeedViewSet(mixins.CreateModelMixin,
     def perform_create(self, serializer):
         parsed = serializer.validated_data.pop('parsed')
         feed_fields = prepare_feed_fields(parsed.get('feed'))
-        feed = Feed.objects.create(**feed_fields, **serializer.validated_data)
+        feed = Feed.objects.create(**feed_fields, **serializer.validated_data, last_update=timezone.now())
         for entry in parsed.get('entries'):
-            item_fields = prepare_feed_item_fields(entry, feed)
-            Item.objects.create(**item_fields)
+            item_fields = prepare_feed_item_fields(entry)
+            Item.objects.create(feed=feed, last_update=timezone.now(), ** item_fields)
 
     @action(detail=True, methods=['post', 'delete'])
     def follow(self, request, *args, **kwargs):
@@ -62,7 +64,7 @@ class ItemViewSet(MultipleSerializerMixin,
         filter_kwargs = {"feed__created_by": self.request.user}
         if self.kwargs.get('feed_id'):
             filter_kwargs['feed_id'] = self.kwargs.get('feed_id')
-        return Item.objects.filter(**filter_kwargs).order_by('-modified')
+        return Item.objects.filter(**filter_kwargs).order_by('-last_update')
 
     @action(detail=False, methods=['post'])
     def read(self, request, *args, **kwargs):

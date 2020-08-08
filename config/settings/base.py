@@ -311,3 +311,5 @@ DJOSER = {
 CORS_URLS_REGEX = r"^/api/.*$"
 # Your stuff...
 # ------------------------------------------------------------------------------
+MAX_RETRY_FEED_UPDATE = env.int("DJANGO_MAX_RETRY_FEED_UPDATE", 3)
+RETRY_DELAY_IN_SECONDS = env.int("DJANGO_RETRY_DELAY_IN_SECONDS", 10)
