@@ -1,15 +1,18 @@
 import json
 from unittest import mock
 
-
-from rest_framework.test import APIClient, APITestCase
 from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient, APITestCase
 
 from rss_feed.users.tests.factories import UserFactory
 
-from .mocking import correct_result, not_found, missing_feed_attrs, missing_all_entries_attr, missing_some_entries_attr
 from ..models import Feed, Item
 from ..utils import prepare_feed_fields, prepare_feed_item_fields
+from .factories import FeedFactory
+from .mocking import (
+    correct_result, missing_all_entries_attr, missing_feed_attrs,
+    missing_some_entries_attr, not_found,
+)
 
 
 class TestActualFeedAPIViewSet(APITestCase):
@@ -218,3 +221,44 @@ class TestFeedAPIViewSet(APITestCase):
         response = response.json()
         self.assertEqual(len(response.keys()), 1)
         self.assertEqual(response.get('xml_url'), ['This field is required.'])
+
+    def test_list_feeds(self):
+        feeds = FeedFactory.create_batch(5, created_by=self.user)
+        FeedFactory.create_batch(3)
+        response = self.client.get(
+            self.main_api
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response.get('count'), len(feeds))
+        for result in response.get('results'):
+            self.assertEqual(len(result.keys()), 6)
+            feed = Feed.objects.get(id=result.get('id'))
+            self.assertIn(feed, feeds)
+            self.assertEqual(result.get('title'), feed.title)
+            self.assertEqual(result.get('xml_url'), feed.xml_url)
+            self.assertEqual(result.get('link'), feed.link)
+            self.assertEqual(result.get('description'), feed.description)
+            self.assertIn('image', result)
+
+    def test_retrieve_feed(self):
+        feed = FeedFactory.create(created_by=self.user)
+        response = self.client.get(
+            self.obj_api.format(feed.id)
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(len(response.keys()), 6)
+        self.assertEqual(response.get('id'), feed.id)
+        self.assertEqual(response.get('title'), feed.title)
+        self.assertEqual(response.get('xml_url'), feed.xml_url)
+        self.assertEqual(response.get('link'), feed.link)
+        self.assertEqual(response.get('description'), feed.description)
+        self.assertIn('image', response)
+
+    def test_retrieve_feed_by_another_user(self):
+        feed = FeedFactory.create()
+        response = self.client.get(
+            self.obj_api.format(feed.id)
+        )
+        self.assertEqual(response.status_code, 404)
