@@ -10,7 +10,7 @@ class FeedSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Feed
-        fields = ('id', 'created_by', 'title', 'xml_url', 'link', 'description', 'image', 'is_followed')
+        fields = ('id', 'created_by', 'title', 'xml_url', 'link', 'description', 'image', 'is_followed', 'last_update')
         extra_kwargs = {
             'title': {"required": False},
             'link': {"required": False},
@@ -32,7 +32,7 @@ class FeedSerializer(serializers.ModelSerializer):
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ('id', 'feed', 'title', 'link', 'published_time', 'description', 'modified')
+        fields = ('id', 'feed', 'title', 'link', 'published_time', 'description', 'last_update')
 
 
 class ItemStateSerializer(serializers.ModelSerializer):

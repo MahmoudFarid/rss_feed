@@ -15,6 +15,7 @@ class FeedFactory(factory.DjangoModelFactory):
     link = factory.Faker("url")
     xml_url = factory.Faker('url')
     is_followed = factory.Faker('pybool')
+    last_update = factory.Faker('future_datetime')
 
 
 class ItemFactory(factory.DjangoModelFactory):
@@ -26,3 +27,4 @@ class ItemFactory(factory.DjangoModelFactory):
     description = factory.Faker("sentence", nb_words=5)
     state = factory.Faker("random_element", elements=Item.STATE_CHOICES._db_values)
     link = factory.Faker("url")
+    last_update = factory.Faker('future_datetime')

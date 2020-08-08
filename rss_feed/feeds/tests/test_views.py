@@ -121,7 +121,7 @@ class TestFeedAPIViewSet(APITestCase):
         self.obj_api = '/api/v1/feeds/{}/'
 
         self.data = {
-            "xml_url": "https://feeds.feedburner.com/tweakers/mixed"
+            "xml_url": "https://test.com"
         }
 
     @mock.patch('rss_feed.feeds.serializers.parse_rss_link', return_value=correct_result)
@@ -145,8 +145,8 @@ class TestFeedAPIViewSet(APITestCase):
         self.assertEqual(Feed.objects.get(**prepare_feed_fields(correct_result.get('feed'))).id, feed.id)
 
         for item_result in correct_result.get('entries'):
-            self.assertTrue(Item.objects.filter(**prepare_feed_item_fields(item_result, feed)).exists())
-            item = Item.objects.get(**prepare_feed_item_fields(item_result, feed))
+            self.assertTrue(Item.objects.filter(**prepare_feed_item_fields(item_result)).exists())
+            item = Item.objects.get(**prepare_feed_item_fields(item_result,))
             self.assertEqual(item.feed, feed)
 
     @mock.patch('rss_feed.feeds.serializers.parse_rss_link', return_value=not_found)
@@ -260,7 +260,7 @@ class TestFeedAPIViewSet(APITestCase):
         response = response.json()
         self.assertEqual(response.get('count'), len(feeds))
         for result in response.get('results'):
-            self.assertEqual(len(result.keys()), 7)
+            self.assertEqual(len(result.keys()), 8)
             feed = Feed.objects.get(id=result.get('id'))
             self.assertIn(feed, feeds)
             self.assertEqual(result.get('title'), feed.title)
@@ -302,7 +302,7 @@ class TestFeedAPIViewSet(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         response = response.json()
-        self.assertEqual(len(response.keys()), 7)
+        self.assertEqual(len(response.keys()), 8)
         self.assertEqual(response.get('id'), feed.id)
         self.assertEqual(response.get('title'), feed.title)
         self.assertEqual(response.get('xml_url'), feed.xml_url)
@@ -393,7 +393,7 @@ class TestItemAPIViewSet(APITestCase):
             self.assertEqual(result.get('link'), item.link)
             self.assertEqual(result.get('published_time'), item.published_time)
             self.assertEqual(result.get('description'), item.description)
-            self.assertEqual(result.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+            self.assertEqual(result.get('last_update'), item.last_update.isoformat().replace('+00:00', 'Z'))
 
     def test_filter_feed_items_by_state(self):
 
@@ -403,11 +403,11 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(response.status_code, 200)
         response = response.json()
         self.assertEqual(response.get('count'), len(self.unread_feed_items))
-        # validate it's ordered by the modified field
+        # validate it's ordered by the last_update field
         results = response.get('results')
         for i, _ in enumerate(results):
             if i < len(self.unread_feed_items) - 1:
-                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+                self.assertTrue(results[i].get('last_update') > results[i + 1].get('last_update'))
 
         response = self.client.get(
             self.feed_items_api + "?state=READ"
@@ -415,11 +415,11 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(response.status_code, 200)
         response = response.json()
         self.assertEqual(response.get('count'), len(self.read_feed_items))
-        # validate it's ordered by the modified field
+        # validate it's ordered by the last_update field
         results = response.get('results')
         for i, _ in enumerate(results):
             if i < len(self.read_feed_items) - 1:
-                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+                self.assertTrue(results[i].get('last_update') > results[i + 1].get('last_update'))
 
     def test_retrieve_feed_item(self):
         response = self.client.get(
@@ -435,7 +435,7 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(response.get('link'), item.link)
         self.assertEqual(response.get('published_time'), item.published_time)
         self.assertEqual(response.get('description'), item.description)
-        self.assertEqual(response.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+        self.assertEqual(response.get('last_update'), item.last_update.isoformat().replace('+00:00', 'Z'))
 
     def test_list_all_items(self):
         response = self.client.get(
@@ -455,7 +455,7 @@ class TestItemAPIViewSet(APITestCase):
             self.assertEqual(result.get('link'), item.link)
             self.assertEqual(result.get('published_time'), item.published_time)
             self.assertEqual(result.get('description'), item.description)
-            self.assertEqual(result.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+            self.assertEqual(result.get('last_update'), item.last_update.isoformat().replace('+00:00', 'Z'))
 
     def test_filter_all_items_by_state(self):
         response = self.client.get(
@@ -466,11 +466,11 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(
             response.get('count'),
             len(self.unread_feed_items) + len(self.unread_items))
-        # validate it's ordered by the modified field
+        # validate it's ordered by the last_update field
         results = response.get('results')
         for i, _ in enumerate(results):
             if i < len(self.unread_feed_items) + len(self.unread_items) - 1:
-                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+                self.assertTrue(results[i].get('last_update') > results[i + 1].get('last_update'))
 
         response = self.client.get(
             self.items_api + "?state=READ"
@@ -480,11 +480,11 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(
             response.get('count'),
             len(self.read_feed_items) + len(self.read_items))
-        # validate it's ordered by the modified field
+        # validate it's ordered by the last_update field
         results = response.get('results')
         for i, _ in enumerate(results):
             if i < len(self.read_feed_items) + len(self.read_items) - 1:
-                self.assertTrue(results[i].get('modified') > results[i + 1].get('modified'))
+                self.assertTrue(results[i].get('last_update') > results[i + 1].get('last_update'))
 
     def test_retrieve_item_globally(self):
         response = self.client.get(
@@ -500,7 +500,7 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(response.get('link'), item.link)
         self.assertEqual(response.get('published_time'), item.published_time)
         self.assertEqual(response.get('description'), item.description)
-        self.assertEqual(response.get('modified'), item.modified.isoformat().replace('+00:00', 'Z'))
+        self.assertEqual(response.get('last_update'), item.last_update.isoformat().replace('+00:00', 'Z'))
 
     def test_mark_items_as_read(self):
         item = self.unread_items[0]

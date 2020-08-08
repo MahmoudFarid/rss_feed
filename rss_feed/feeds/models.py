@@ -13,7 +13,9 @@ class Feed(TimeStampedModel):
     link = models.URLField()
     description = models.TextField()
     image = models.ImageField(null=True, blank=True)
+    last_update = models.DateTimeField(null=True, blank=True)
     is_followed = models.BooleanField(default=True)
+    is_auto_update = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ('created_by', 'xml_url')
@@ -32,7 +34,11 @@ class Item(TimeStampedModel):
     link = models.URLField()
     published_time = models.DateTimeField(null=True, blank=True)
     description = models.TextField()
+    last_update = models.DateTimeField(null=True, blank=True)
     state = models.CharField(choices=STATE_CHOICES, default=STATE_CHOICES.UNREAD, max_length=10)
+
+    class Meta:
+        ordering = ('-published_time', '-last_update')
 
     def __str__(self):
         return self.title
