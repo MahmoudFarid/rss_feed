@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from time import mktime
 
+from django.core.mail import send_mail
 from django.utils import timezone
 
 import feedparser
@@ -67,4 +68,10 @@ def update_feeds_and_items(feed, parsed):
 
 
 def send_notification_to_user(feed):
-    pass
+    return send_mail(
+        'Feed Auto Update Failed!',
+        'This Feed: %s will not be auto updated due to some errors.' % (feed.xml_url),
+        'noreply@example.com',
+        [feed.created_by.email],
+        fail_silently=False,
+    )
