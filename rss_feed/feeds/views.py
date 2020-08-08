@@ -12,7 +12,11 @@ from rss_feed.core.mixins import MultipleSerializerMixin
 from .filters import FeedFilter, ItemFilter
 from .models import Feed, Item
 from .serializers import FeedSerializer, ItemSerializer, ItemStateSerializer
-from .utils import prepare_feed_fields, prepare_feed_item_fields
+from .utils import (
+    parse_rss_link, prepare_feed_fields, prepare_feed_item_fields,
+    update_feeds_and_items,
+)
+from .validators import validate_rss_link
 
 
 class FeedViewSet(mixins.CreateModelMixin,
@@ -47,6 +51,17 @@ class FeedViewSet(mixins.CreateModelMixin,
             instance.is_followed = False
         instance.save()
         return Response(status=status.HTTP_200_OK, data=self.get_serializer(instance).data)
+
+    @action(detail=True, methods=['post'])
+    def force_update(self, request, *args, **kwargs):
+        feed = self.get_object()
+        parsed = parse_rss_link(feed.xml_url)
+        error = validate_rss_link(parsed)
+        if error:
+            raise ValidationError({"non_field_errors": error})
+        update_feeds_and_items(feed, parsed)
+        feed.refresh_from_db()
+        return Response(status=status.HTTP_200_OK, data=self.get_serializer(feed).data)
 
 
 class ItemViewSet(MultipleSerializerMixin,

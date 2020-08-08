@@ -1,6 +1,8 @@
 import json
 from unittest import mock
 
+from django.utils import timezone
+
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase
 
@@ -12,6 +14,11 @@ from .factories import FeedFactory, ItemFactory
 from .mocking import (
     correct_result, missing_all_entries_attr, missing_feed_attrs,
     missing_some_entries_attr, not_found,
+)
+
+FAKE_DATE = timezone.make_aware(
+    timezone.datetime(2018, 1, 1),
+    timezone=timezone.utc
 )
 
 
@@ -355,6 +362,38 @@ class TestFeedAPIViewSet(APITestCase):
         self.assertEqual(response.status_code, 400)
         response = response.json()
         self.assertEqual(response.get('non_field_errors'), ["You already followed this feed"])
+
+    @mock.patch('rss_feed.feeds.views.parse_rss_link', return_value=correct_result)
+    @mock.patch('django.utils.timezone.now', return_value=FAKE_DATE)
+    def test_force_feed_update(self, _, __):
+        feed = FeedFactory.create(created_by=self.user)
+        response = self.client.post(
+            self.obj_api.format(feed.id) + "force_update/"
+        )
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        feed.refresh_from_db()
+        self.assertEqual(feed.last_update, FAKE_DATE)
+        # after run the task, the existing feed will be updated to the mocked data
+        fields = prepare_feed_fields(correct_result.get('feed'))
+        for key, value in fields.items():
+            # validate the objects is updated
+            self.assertEqual(getattr(feed, key), value)
+        # validate the response returns the updated object
+        self.assertEqual(response.get('title'), feed.title)
+        self.assertEqual(feed.items.count(), 3)  # add new 3 items from the mock
+
+    @mock.patch('rss_feed.feeds.views.parse_rss_link', return_value=missing_feed_attrs)
+    def test_force_feed_update_with_wrong_feed(self, _):
+        feed = FeedFactory.create(created_by=self.user)
+        response = self.client.post(
+            self.obj_api.format(feed.id) + "force_update/"
+        )
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertIn('has no title', response.get('non_field_errors')[0])
+        self.assertIn('has no subtitle', response.get('non_field_errors')[0])
+        self.assertIn('has no link', response.get('non_field_errors')[0])
 
 
 class TestItemAPIViewSet(APITestCase):
