@@ -8,7 +8,7 @@ def validate_rss_link(parsed):
     Returns an error in case an Exception raised during the validation.
 
     Parameters:
-        parsed (FeedParserDict): Object from feedparser.parse
+        parsed (dict): Object from feedparser.parse
 
     Returns:
         error (str)(option): The error message
@@ -26,7 +26,7 @@ def validate_feed_attrs(parsed):
     Validate the feed that has all the required attrs.
 
     Parameters:
-        parsed (FeedParserDict): Object from feedparser.parse
+        parsed (dict): Object from feedparser.parse
 
     Returns:
         error (Exception)(option): The error message
@@ -57,7 +57,7 @@ def validate_feed_items_attrs(parsed):
         and will override the parsed items with the valid one.
 
     Parameters:
-        parsed (FeedParserDict): Object from feedparser.parse
+        parsed (dict): Object from feedparser.parse
 
     Returns:
         error (Exception)(option): The error message

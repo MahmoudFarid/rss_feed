@@ -36,7 +36,7 @@ class FeedViewSet(mixins.CreateModelMixin,
         feed = Feed.objects.create(**feed_fields, **serializer.validated_data, last_update=timezone.now())
         for entry in parsed.get('entries'):
             item_fields = prepare_feed_item_fields(entry)
-            Item.objects.create(feed=feed, last_update=timezone.now(), ** item_fields)
+            Item.objects.create(feed=feed, last_update=timezone.now(), **item_fields)
 
     @action(detail=True, methods=['post', 'delete'])
     def follow(self, request, *args, **kwargs):

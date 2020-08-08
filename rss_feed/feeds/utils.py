@@ -13,10 +13,26 @@ logger = logging.getLogger(__name__)
 
 
 def parse_rss_link(link):
+    '''
+    Parameters:
+        link (URL): Any xml url that need to be parsed.
+
+    Returns:
+        parsed (dict): Parsed object for this RSS link.
+    '''
     return feedparser.parse(link)
 
 
 def prepare_feed_fields(feed):
+    '''
+    Prepare Feed fields based scraped feed attrs
+
+    Parameters:
+        feed (dict): Object from feedparser.FeedParserDict
+
+    Returns:
+        fields (dict): All needed fields to create a Feed object
+    '''
     fields = {
         "title": feed.get('title'),
         "link": feed.get('link'),
@@ -28,6 +44,16 @@ def prepare_feed_fields(feed):
 
 
 def get_entry_published_time(entry):
+    '''
+    Try to parse published_time from the scraped item data from published_parsed attr.
+    In case we can't parse this value, will try to parse published attr.
+
+    Parameters:
+        entry (dict): Object from feedparser.FeedParserDict
+
+    Returns:
+        published_time (datetime)(option): parsed datetime obj or None
+    '''
     published_time = None
     try:
         published_time = datetime.fromtimestamp(mktime(entry.get("published_parsed")))
@@ -42,6 +68,15 @@ def get_entry_published_time(entry):
 
 
 def prepare_feed_item_fields(entry):
+    '''
+    Prepare Item fields based scraped item attrs
+
+    Parameters:
+        entry (dict): Object from feedparser.FeedParserDict
+
+    Returns:
+        fields (dict): All needed fields to create an Item object
+    '''
     fields = {
         "title": entry.get('title'),
         "link": entry.get('link'),
@@ -52,6 +87,17 @@ def prepare_feed_item_fields(entry):
 
 
 def update_feeds_and_items(feed, parsed):
+    '''
+    Update feed object with its items based on the scraped data.
+    Will create new items if it's not exists or update the existing ones.
+
+    Parameters:
+        feed (obj): Feed object
+        parsed (dict): Object from feedparser.parse
+
+    Returns:
+        fields (dict): All needed fields to create an Item object
+    '''
     for field, value in prepare_feed_fields(parsed.get('feed')).items():
         setattr(feed, field, value)
     feed.last_update = timezone.now()
@@ -68,6 +114,15 @@ def update_feeds_and_items(feed, parsed):
 
 
 def send_notification_to_user(feed):
+    '''
+    Send email notification to the user
+
+    Parameters:
+        feed (obj): Feed object
+
+    Returns:
+        (bool): Success or Failure
+    '''
     return send_mail(
         'Feed Auto Update Failed!',
         'This Feed: %s will not be auto updated due to some errors.' % (feed.xml_url),
