@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
 from .models import Feed, Item
-from .validators import validate_rss_link
 from .utils import parse_rss_link
+from .validators import validate_rss_link
 
 
 class FeedSerializer(serializers.ModelSerializer):
@@ -36,7 +36,7 @@ class ItemSerializer(serializers.ModelSerializer):
 
 
 class ItemStateSerializer(serializers.ModelSerializer):
-    ids = serializers.ListField(min_length=0, allow_empty=False)
+    ids = serializers.ListField(allow_empty=False)
 
     class Meta:
         model = Item

@@ -605,3 +605,17 @@ class TestItemAPIViewSet(APITestCase):
         self.assertEqual(response.status_code, 400)
         response = response.json()
         self.assertEqual(response.get('ids'), ['This field is required.'])
+
+    def test_mark_items_as_read_with_empty_list(self):
+        data = {
+            "ids": []
+        }
+        response = self.client.post(
+            self.items_api + "read/",
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        response = response.json()
+        self.assertEqual(response.get('ids'), ['This list may not be empty.'])
