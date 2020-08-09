@@ -46,7 +46,7 @@ def prepare_feed_fields(feed):
 def get_entry_published_time(entry):
     '''
     Try to parse published_time from the scraped item data from published_parsed attr.
-    In case we can't parse this value, will try to parse published attr.
+    In case we can't parse this value, we will try to parse published attr.
 
     Parameters:
         entry (dict): Object from feedparser.FeedParserDict
@@ -69,7 +69,7 @@ def get_entry_published_time(entry):
 
 def prepare_feed_item_fields(entry):
     '''
-    Prepare Item fields based scraped item attrs
+    Prepare Item fields based scraped item attrs.
 
     Parameters:
         entry (dict): Object from feedparser.FeedParserDict
@@ -88,8 +88,8 @@ def prepare_feed_item_fields(entry):
 
 def update_feeds_and_items(feed, parsed):
     '''
-    Update feed object with its items based on the scraped data.
-    Will create new items if it's not exists or update the existing ones.
+    Update the feed object with its items based on the scraped data.
+    Will create new items if it does not exist or update the existing ones.
 
     Parameters:
         feed (obj): Feed object

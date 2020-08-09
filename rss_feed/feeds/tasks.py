@@ -5,6 +5,7 @@ from django.conf import settings
 
 from celery import group, shared_task
 from celery.exceptions import MaxRetriesExceededError
+
 from .models import Feed
 from .utils import parse_rss_link, send_notification_to_user, update_feeds_and_items
 from .validators import validate_rss_link
